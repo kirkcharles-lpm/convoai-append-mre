@@ -52,6 +52,8 @@ The verdict prints the two-queued / one-queued speech ratio and every reason tha
 2. **audio died**: recovery as a whole has less than 20% speech, or its final 30 seconds have less than 10% speech while serial lines are still being sent. Both tests share this reason, so it prints once.
 3. **audio track unpublished while agent RUNNING**: the target audio is unpublished at the end, despite a RUNNING agent and at least 95% coverage in every phase.
 
+Reasons 2 and 3 also fire if something outside ConvoAI and LemonSlice ends the avatar session during the run. Before reading them as a vendor symptom, check the log for `RTC publisher-left uid=<avatar uid>`: an avatar that leaves the channel was ended, not silenced. See the correction below.
+
 Exit codes: **0** = NOT REPRODUCED (no reason fired); **1** = REPRODUCED; **2** = invalid run or configuration/runtime/cleanup error; **130** = interruption with successful cleanup. A stopped or failed agent remains invalid even if other symptoms fired.
 
 ### First three runs per mode
@@ -61,11 +63,13 @@ Same project and same spoken line; each row summarizes three runs. Phase columns
 | Mode | serial | one-queued | two-queued | recovery | longest recovery silence |
 | --- | --- | --- | --- | --- | --- |
 | no avatar ×3 | 40–41% | 76–78% | 70–71% | 42–43% | 4.5–4.6 s |
-| LemonSlice ×3 | 36–37% | 75–77% | 36–39% | 27–37% | 5.6–26.3 s |
+| LemonSlice ×3 | 36–37% | 75–77% | 36–39% | 27–37%\* | 5.6–26.3 s\* |
 
 The two-queued / one-queued ratios were 0.467–0.515 with LemonSlice and 0.894–0.935 without an avatar. With two lines queued, LemonSlice speech bursts were about one line long (≈3.2 s), compared with ≈6.7 s without an avatar. This is consistent with one line of each queued pair playing and the other being dropped, in 3 of 3 LemonSlice runs. The listener measures received audio, so it cannot identify which individual line was dropped or independently verify server-side TTS production or internal error events.
 
-The **0.70 threshold was chosen after these first runs**. The previous recovery-only verdict missed the repeatable queue symptom twice; the third LemonSlice run ended with unpublished audio while the agent was still RUNNING, which now counts as a reproduction symptom.
+The **0.70 threshold was chosen after these first runs**, then confirmed on fresh runs below.
+
+\* See the correction below: the LemonSlice recovery-phase values were affected by our own environment.
 
 ### Confirmation runs (fresh, after the threshold was fixed)
 
@@ -79,6 +83,12 @@ Two more runs per mode, alternating modes, same project and line, with the 0.70 
 | LemonSlice | 2 | 0.480 | REPRODUCED (queued line dropped) |
 
 Across all five runs per mode the ratios separate cleanly: LemonSlice 0.467–0.515, no avatar 0.890–0.935.
+
+### Correction (2026-10-22): late-run silences in our LemonSlice runs came from our own environment
+
+In our project, a session-cleanup job outside this repository ended LemonSlice avatar sessions about five minutes after they started. In the three LemonSlice runs whose logs we kept and that ended with recovery silence or an unpublished avatar track, the avatar left the channel (`RTC publisher-left`) 310–340 s after the run started, while the agent was still RUNNING. The one other kept LemonSlice log shows no such exit and a normal recovery phase. The first run's log was not kept; its recovery silence falls in the same window. That exit was our cleanup job, not ConvoAI or LemonSlice, so please disregard the recovery-phase observations and the unpublished-track result.
+
+The two-queued phase ends about 4.3 minutes into a run, before that cutoff, so **the queued-line-drop result above is unaffected**. In a project without such a job, the expected symptom is the queued-line drop only.
 
 A healthy bare-agent run plus a failing avatar run points to the avatar-enabled path; if both fail, the failure also exists without the avatar. A clean run is evidence for that exact configuration, not proof the symptom is absent.
 
