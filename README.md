@@ -108,6 +108,12 @@ Tests use inert fixtures, stubbed REST, virtual phase clocks and Node's built-in
 2. Does the failure originate in ConvoAI's audio queue or its avatar forwarding/playback path? Compare the same TTS settings in both modes.
 3. Is there a per-utterance **started playing** event, with a correlation ID, distinct from TTS generation or REST acceptance?
 
+## Related incident
+
+[2026-10-22: mid-line audio stall and a lost APPEND line](incidents/2026-10-22-mid-line-stall.md). With strictly one
+line at a time (no queueing), the avatar's audio stopped mid-sentence, the next APPEND line was never played, and
+normal playback resumed about 10 s later. The report has the agent ID, channel, exact UTC timestamps and our questions.
+
 ## API sources and choices
 
 Checked against public Agora documentation on 2026-10-21: [join](https://docs.agora.io/en/api-reference/api-ref/conversational-ai/join), [speak](https://docs.agora.io/en/api-reference/api-ref/conversational-ai/speak), [leave](https://docs.agora.io/en/api-reference/api-ref/conversational-ai/leave), [query](https://docs.agora.io/en/api-reference/api-ref/conversational-ai/query), [LemonSlice](https://docs.agora.io/en/ai/models/avatar/lemonslice), [ElevenLabs](https://docs.agora.io/en/ai/models/tts/elevenlabs), [Microsoft](https://docs.agora.io/en/ai/models/tts/microsoft), [Web SDK setup](https://docs.agora.io/en/realtime-media/rtc/voice-quickstart/web).
